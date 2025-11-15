@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR/VR Interface Design - NeuroSpace</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            color: #ffffff;
+            cursor: none;
+        }
+
+        /* Custom Cursor for VR-like experience */
+        .cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            background: radial-gradient(circle, #00ffff 0%, #0080ff 100%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            mix-blend-mode: screen;
+            transition: transform 0.1s ease;
+            box-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff, 0 0 60px #00ffff;
+        }
+
+        .cursor.active {
+            transform: scale(1.5);
+            background: radial-gradient(circle, #ff6b6b 0%, #ff4757 100%);
+            box-shadow: 0 0 20px #ff6b6b, 0 0 40px #ff6b6b, 0 0 60px #ff6b6b;
+        }
+
+        /* VR Headset Container */
+        .vr-container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            perspective: 1000px;
+        }
+
+        /* Header with holographic effect */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 300;
+            background: linear-gradient(45deg, #00ffff, #ff6b6b, #4ecdc4, #45b7d1);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: hologram 4s ease-in-out infinite;
+            text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: #a0a0a0;
+            margin-top: 10px;
+        }
+
+        /* Main Interface Container */
+        .interface-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 30px;
+            height: 80vh;
+            position: relative;
+        }
+
+        /* Left Panel - Navigation */
+        .nav-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transform: rotateY(-5deg);
+            transition: all 0.3s ease;
+        }
+
+        .nav-panel:hover {
+            transform: rotateY(0deg) scale(1.02);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .nav-item {
+            padding: 15px 20px;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .nav-item:hover::before {
+            left: 100%;
+        }
+
+        .nav-item:hover {
+            background: rgba(0, 255, 255, 0.1);
+            border-color: #00ffff;
+            transform: translateX(10px);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.3);
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(45deg, #00ffff, #4ecdc4);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        /* Center Panel - Main Workspace */
+        .workspace {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            transform: rotateX(2deg);
+            transition: all 0.3s ease;
+        }
+
+        .workspace:hover {
+            transform: rotateX(0deg) scale(1.01);
+        }
+
+        .workspace::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg, transparent, rgba(0, 255, 255, 0.1), transparent, rgba(255, 107, 107, 0.1), transparent);
+            animation: rotate 20s linear infinite;
+            pointer-events: none;
+        }
+
+        .workspace-content {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .workspace-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .workspace-title {
+            font-size: 1.8rem;
+            font-weight: 300;
+            color: #00ffff;
+        }
+
+        .workspace-controls {
+            display: flex;
+            gap: 15px;
+        }
+
+        .control-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .control-btn:hover {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #00ffff;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+
+        /* 3D Objects Grid */
+        .objects-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            flex: 1;
+            align-content: start;
+        }
+
+        .object-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            transform-style: preserve-3d;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .object-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .object-card:hover::before {
+            transform: translateX(100%);
+        }
+
+        .object-card:hover {
+            transform: translateY(-10px) rotateX(5deg);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #4ecdc4;
+            box-shadow: 0 20px 40px rgba(78, 205, 196, 0.3);
+        }
+
+        .object-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border-radius: 15px;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .object-card:nth-child(2) .object-icon {
+            animation-delay: -1s;
+        }
+
+        .object-card:nth-child(3) .object-icon {
+            animation-delay: -2s;
+        }
+
+        .object-name {
+            font-size: 1rem;
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+
+        .object-desc {
+            font-size: 0.8rem;
+            color: #a0a0a0;
+        }
+
+        /* Right Panel - Properties */
+        .properties-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px 20px;
+            transform: rotateY(5deg);
+            transition: all 0.3s ease;
+        }
+
+        .properties-panel:hover {
+            transform: rotateY(0deg) scale(1.02);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .properties-title {
+            font-size: 1.4rem;
+            color: #ff6b6b;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .property-group {
+            margin-bottom: 25px;
+        }
+
+        .property-label {
+            font-size: 0.9rem;
+            color: #a0a0a0;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .property-slider {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .property-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(45deg, #00ffff, #4ecdc4);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .color-picker {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .color-option {
+            width: 100%;
+            height: 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .color-option:hover {
+            border-color: #ffffff;
+            transform: scale(1.1);
+        }
+
+        .color-option.red { background: linear-gradient(45deg, #ff6b6b, #ff4757); }
+        .color-option.blue { background: linear-gradient(45deg, #00ffff, #0080ff); }
+        .color-option.green { background: linear-gradient(45deg, #4ecdc4, #45b7d1); }
+        .color-option.purple { background: linear-gradient(45deg, #a55eea, #8854d0); }
+
+        /* Gesture Indicators */
+        .gesture-indicators {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+        }
+
+        .gesture-hint {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-size: 0.8rem;
+            color: #a0a0a0;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        /* Hand Tracking Visualization */
+        .hand-tracker {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .hand-visualization {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hand-outline {
+            width: 80px;
+            height: 100px;
+            border: 2px solid #00ffff;
+            border-radius: 40px 40px 20px 20px;
+            position: relative;
+            animation: handGlow 2s ease-in-out infinite;
+        }
+
+        .finger {
+            position: absolute;
+            width: 8px;
+            height: 25px;
+            background: #00ffff;
+            border-radius: 4px;
+            opacity: 0.7;
+        }
+
+        .finger.thumb { top: 20px; left: -10px; transform: rotate(-30deg); }
+        .finger.index { top: -15px; left: 15px; }
+        .finger.middle { top: -20px; left: 25px; }
+        .finger.ring { top: -15px; left: 35px; }
+        .finger.pinky { top: 0px; left: 45px; }
+
+        /* Floating UI Elements */
+        .floating-menu {
+            position: fixed;
+            top: 50%;
+            left: 20px;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .floating-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .floating-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .floating-btn:hover::before {
+            opacity: 1;
+        }
+
+        .floating-btn:hover {
+            transform: scale(1.1);
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #00ffff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
+        }
+
+        /* Animations */
+        @keyframes hologram {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes handGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 255, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(0, 255, 255, 0.6); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .interface-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                height: auto;
+            }
+
+            .nav-panel, .properties-panel {
+                transform: none;
+                order: 2;
+            }
+
+            .workspace {
+                order: 1;
+                transform: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+
+            .objects-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .hand-tracker {
+                position: static;
+                width: 100%;
+                margin-top: 20px;
+            }
+
+            .floating-menu {
+                position: static;
+                flex-direction: row;
+                justify-content: center;
+                margin-top: 20px;
+            }
+        }
+
+        /* Loading Animation */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #00ffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Custom Cursor -->
+    <div class="cursor" id="cursor"></div>
+
+    <!-- Hand Tracking Visualization -->
+    <div class="hand-tracker">
+        <div class="hand-visualization">
+            <div class="hand-outline">
+                <div class="finger thumb"></div>
+                <div class="finger index"></div>
+                <div class="finger middle"></div>
+                <div class="finger ring"></div>
+                <div class="finger pinky"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Menu -->
+    <div class="floating-menu">
+        <div class="floating-btn" data-tooltip="Voice Commands" onclick="toggleVoiceCommands()">🎤</div>
+        <div class="floating-btn" data-tooltip="Eye Tracking" onclick="toggleEyeTracking()">👁️</div>
+        <div class="floating-btn" data-tooltip="Gesture Mode" onclick="toggleGestureMode()">✋</div>
+        <div class="floating-btn" data-tooltip="Settings" onclick="openSettings()">⚙️</div>
+    </div>
+
+    <div class="vr-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>NeuroSpace VR</h1>
+            <p>Intuitive 3D Design Environment</p>
+        </div>
+
+        <!-- Main Interface -->
+        <div class="interface-container">
+            <!-- Left Navigation Panel -->
+            <div class="nav-panel">
+                <div class="nav-item active" onclick="selectTool('select')">
+                    <div class="nav-icon">🔍</div>
+                    <span>Select</span>
+                </div>
+                <div class="nav-item" onclick="selectTool('move')">
+                    <div class="nav-icon">✋</div>
+                    <span>Move</span>
+                </div>
+                <div class="nav-item" onclick="selectTool('rotate')">
+                    <div class="nav-icon">🔄</div>
+                    <span>Rotate</span>
+                </div>
+                <div class="nav-item" onclick="selectTool('scale')">
+                    <div class="nav-icon">📏</div>
+                    <span>Scale</span>
+                </div>
+                <div class="nav-item" onclick="selectTool('create')">
+                    <div class="nav-icon">➕</div>
+                    <span>Create</span>
+                </div>
+                <div class="nav-item" onclick="selectTool('materials')">
+                    <div class="nav-icon">🎨</div>
+                    <span>Materials</span>
+                </div>
+                <div class="nav-item" onclick="selectTool('lighting')">
+                    <div class="nav-icon">💡</div>
+                    <span>Lighting</span>
+                </div>
+            </div>
+
+            <!-- Center Workspace -->
+            <div class="workspace">
+                <div class="workspace-content">
+                    <div class="workspace-header">
+                        <h2 class="workspace-title">3D Scene</h2>
+                        <div class="workspace-controls">
+                            <div class="control-btn" onclick="undoAction()">↶</div>
+                            <div class="control-btn" onclick="redoAction()">↷</div>
+                            <div class="control-btn" onclick="resetView()">🏠</div>
+                            <div class="control-btn" onclick="toggleWireframe()">⬜</div>
+                        </div>
+                    </div>
+
+                    <div class="objects-grid">
+                        <div class="object-card" onclick="createObject('cube')">
+                            <div class="object-icon">📦</div>
+                            <div class="object-name">Cube</div>
+                            <div class="object-desc">Basic primitive</div>
+                        </div>
+                        <div class="object-card" onclick="createObject('sphere')">
+                            <div class="object-icon">🔮</div>
+                            <div class="object-name">Sphere</div>
+                            <div class="object-desc">Rounded primitive</div>
+                        </div>
+                        <div class="object-card" onclick="createObject('cylinder')">
+                            <div class="object-icon">🛢️</div>
+                            <div class="object-name">Cylinder</div>
+                            <div class="object-desc">Tubular shape</div>
+                        </div>
+                        <div class="object-card" onclick="createObject('plane')">
+                            <div class="object-icon">⬜</div>
+                            <div class="object-name">Plane</div>
+                            <div class="object-desc">Flat surface</div>
+                        </div>
+                        <div class="object-card" onclick="createObject('light')">
+                            <div class="object-icon">💡</div>
+                            <div class="object-name">Light</div>
+                            <div class="object-desc">Illumination</div>
+                        </div>
+                        <div class="object-card" onclick="createObject('camera')">
+                            <div class="object-icon">📷</div>
+                            <div class="object-name">Camera</div>
+                            <div class="object-desc">Viewpoint</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Properties Panel -->
+            <div class="properties-panel">
+                <h3 class="properties-title">Properties</h3>
+                
+                <div class="property-group">
+                    <label class="property-label">Position X</label>
+                    <input type="range" class="property-slider" min="-10" max="10" value="0" oninput="updateProperty('posX', this.value)">
+                </div>
+
+                <div class="property-group">
+                    <label class="property-label">Position Y</label>
+                    <input type="range" class="property-slider" min="-10" max="10" value="0" oninput="updateProperty('posY', this.value)">
+                </div>
+
+                <div class="property-group">
+                    <label class="property-label">Position Z</label>
+                    <input type="range" class="property-slider" min="-10" max="10" value="0" oninput="updateProperty('posZ', this.value)">
+                </div>
+
+                <div class="property-group">
+                    <label class="property-label">Scale</label>
+                    <input type="range" class="property-slider" min="0.1" max="3" value="1" step="0.1" oninput="updateProperty('scale', this.value)">
+                </div>
+
+                <div class="property-group">
+                    <label class="property-label">Rotation</label>
+                    <input type="range" class="property-slider" min="0" max="360" value="0" oninput="updateProperty('rotation', this.value)">
+                </div>
+
+                <div class="property-group">
+                    <label class="property-label">Material Color</label>
+                    <div class="color-picker">
+                        <div class="color-option red" onclick="setColor('red')"></div>
+                        <div class="color-option blue" onclick="setColor('blue')"></div>
+                        <div class="color-option green" onclick="setColor('green')"></div>
+                        <div class="color-option purple" onclick="setColor('purple')"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gesture Indicators -->
+    <div class="gesture-indicators">
+        <div class="gesture-hint">👋 Wave to activate</div>
+        <div class="gesture-hint">👆 Point to select</div>
+        <div class="gesture-hint">✊ Grab to move</div>
+        <div class="gesture-hint">🤏 Pinch to scale</div>
+    </div>
+
+    <script>
+        // Global state
+        let currentTool = 'select';
+        let selectedObject = null;
+        let isVoiceActive = false;
+        let isEyeTrackingActive = false;
+        let isGestureModeActive = false;
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hide loading overlay after 2 seconds
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }, 2000);
+
+            // Initialize cursor tracking
+            initializeCursor();
+            
+            // Initialize gesture simulation
+            initializeGestureSimulation();
+            
+            // Initialize voice commands
+            initializeVoiceCommands();
+            
+            console.log('NeuroSpace VR Interface initialized');
+        });
+
+        // Custom cursor functionality
+        function initializeCursor() {
+            const cursor = document.getElementById('cursor');
+            let mouseX = 0, mouseY = 0;
+
+            document.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+                cursor.style.left = mouseX - 10 + 'px';
+                cursor.style.top = mouseY - 10 + 'px';
+            });
+
+            document.addEventListener('mousedown', () => {
+                cursor.classList.add('active');
+            });
+
+            document.addEventListener('mouseup', () => {
+                cursor.classList.remove('active');
+            });
+        }
+
+        // Tool selection
+        function selectTool(tool) {
+            // Remove active class from all nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Add active class to selected tool
+            event.target.closest('.nav-item').classList.add('active');
+            
+            currentTool = tool;
+            console.log(`Tool selected: ${tool}`);
+            
+            // Update cursor based on tool
+            updateCursorForTool(tool);
+            
+            // Show feedback
+            showFeedback(`${tool.charAt(0).toUpperCase() + tool.slice(1)} tool activated`);
+        }
+
+        function updateCursorForTool(tool) {
+            const cursor = document.getElementById('cursor');
+            cursor.className = 'cursor';
+            cursor.classList.add(`tool-${tool}`);
+        }
+
+        // Object creation
+        function createObject(type) {
+            console.log(`Creating ${type} object`);
+            
+            // Visual feedback
+            const card = event.target.closest('.object-card');
+            card.style.transform = 'translateY(-10px) rotateX(5deg) scale(0.95)';
+            
+            setTimeout(() => {
+                card.style.transform = 'translateY(-10px) rotateX(5deg)';
+            }, 150);
+            
+            // Simulate object creation in 3D space
+            setTimeout(() => {
+                showFeedback(`${type.charAt(0).toUpperCase() + type.slice(1)} created in 3D space`);
+                
+                // Animate hand tracker to show interaction
+                animateHandGesture();
+            }, 300);
+        }
+
+        // Property updates
+        function updateProperty(property, value) {
+            console.log(`Updating ${property}: ${value}`);
+            
+            // Visual feedback for property changes
+            if (selectedObject) {
+                showFeedback(`${property}: ${value}`);
+            }
+            
+            // Simulate real-time property updates
+            updateObjectInSpace(property, value);
+        }
+
+        function updateObjectInSpace(property, value) {
+            // Simulate 3D object property updates
+            const workspace = document.querySelector('.workspace');
+            const indicator = document.createElement('div');
+            indicator.style.position = 'absolute';
+            indicator.style.top = '50%';
+            indicator.style.left = '50%';
+            indicator.style.transform = 'translate(-50%, -50%)';
+            indicator.style.color = '#00ffff';
+            indicator.style.fontSize = '14px';
+            indicator.style.pointerEvents = 'none';
+            indicator.style.zIndex = '1000';
+            indicator.textContent = `${property}: ${value}`;
+            indicator.style.animation = 'fade-in 0.3s ease, fade-out 0.3s ease 1s forwards';
+            
+            workspace.appendChild(indicator);
+            
+            setTimeout(() => {
+                indicator.remove();
+            }, 1500);
+        }
+
+        // Color selection
+        function setColor(color) {
+            console.log(`Setting color: ${color}`);
+            
+            // Remove active class from all color options
+            document.querySelectorAll('.color-option').forEach(option => {
+                option.style.borderColor = 'transparent';
+            });
+            
+            // Highlight selected color
+            event.target.style.borderColor = '#ffffff';
+            
+            showFeedback(`Material color changed to ${color}`);
+        }
+
+        // Workspace controls
+        function undoAction() {
+            console.log('Undo action');
+            showFeedback('Action undone');
+            animateControlButton(event.target);
+        }
+
+        function redoAction() {
+            console.log('Redo action');
+            showFeedback('Action redone');
+            animateControlButton(event.target);
+        }
+
+        function resetView() {
+            console.log('Reset view');
+            showFeedback('View reset to home position');
+            animateControlButton(event.target);
+        }
+
+        function toggleWireframe() {
+            console.log('Toggle wireframe');
+            showFeedback('Wireframe mode toggled');
+            animateControlButton(event.target);
+        }
+
+        function animateControlButton(button) {
+            button.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                button.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    button.style.transform = 'scale(1)';
+                }, 100);
+            }, 100);
+        }
+
+        // Floating menu functions
+        function toggleVoiceCommands() {
+            isVoiceActive = !isVoiceActive;
+            const button = event.target.closest('.floating-btn');
+            
+            if (isVoiceActive) {
+                button.style.background = 'rgba(0, 255, 255, 0.3)';
+                button.style.borderColor = '#00ffff';
+                showFeedback('Voice commands activated');
+                startVoiceListening();
+            } else {
+                button.style.background = 'rgba(255, 255, 255, 0.1)';
+                button.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                showFeedback('Voice commands deactivated');
+                stopVoiceListening();
+            }
+        }
+
+        function toggleEyeTracking() {
+            isEyeTrackingActive = !isEyeTrackingActive;
+            const button = event.target.closest('.floating-btn');
+            
+            if (isEyeTrackingActive) {
+                button.style.background = 'rgba(255, 107, 107, 0.3)';
+                button.style.borderColor = '#ff6b6b';
+                showFeedback('Eye tracking activated');
+                startEyeTracking();
+            } else {
+                button.style.background = 'rgba(255, 255, 255, 0.1)';
+                button.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                showFeedback('Eye tracking deactivated');
+                stopEyeTracking();
+            }
+        }
+
+        function toggleGestureMode() {
+            isGestureModeActive = !isGestureModeActive;
+            const button = event.target.closest('.floating-btn');
+            
+            if (isGestureModeActive) {
+                button.style.background = 'rgba(78, 205, 196, 0.3)';
+                button.style.borderColor = '#4ecdc4';
+                showFeedback('Gesture mode activated');
+                startGestureTracking();
+            } else {
+                button.style.background = 'rgba(255, 255, 255, 0.1)';
+                button.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                showFeedback('Gesture mode deactivated');
+                stopGestureTracking();
+            }
+        }
+
+        function openSettings() {
+            showFeedback('Settings panel opened');
+            animateControlButton(event.target);
+            
+            // Create and show settings modal
+            createSettingsModal();
+        }
+
+        // Gesture simulation
+        function initializeGestureSimulation() {
+            // Simulate hand gestures
+            setInterval(() => {
+                if (isGestureModeActive) {
+                    simulateGesture();
+                }
+            }, 3000);
+        }
+
+        function simulateGesture() {
+            const gestures = ['wave', 'point', 'grab', 'pinch'];
+            const randomGesture = gestures[Math.floor(Math.random() * gestures.length)];
+            
+            console.log(`Gesture detected: ${randomGesture}`);
+            animateHandGesture();
+            showFeedback(`Gesture detected: ${randomGesture}`);
+        }
+
+        function animateHandGesture() {
+            const handTracker = document.querySelector('.hand-tracker');
+            handTracker.style.transform = 'scale(1.1)';
+            handTracker.style.borderColor = '#00ffff';
+            
+            setTimeout(() => {
+                handTracker.style.transform = 'scale(1)';
+                handTracker.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+            }, 500);
+        }
+
+        // Voice commands
+        function initializeVoiceCommands() {
+            // Simulate voice command recognition
+            const commands = ['create cube', 'select all', 'change color', 'rotate object', 'save scene'];
+            
+            setInterval(() => {
+                if (isVoiceActive) {
+                    const randomCommand = commands[Math.floor(Math.random() * commands.length)];
+                    processVoiceCommand(randomCommand);
+                }
+            }, 5000);
+        }
+
+        function startVoiceListening() {
+            console.log('Voice listening started');
+        }
+
+        function stopVoiceListening() {
+            console.log('Voice listening stopped');
+        }
+
+        function processVoiceCommand(command) {
+            console.log(`Voice command: ${command}`);
+            showFeedback(`Voice: "${command}"`);
+        }
+
+        // Eye tracking
+        function startEyeTracking() {
+            console.log('Eye tracking started');
+            
+            // Simulate eye movement tracking
+            setInterval(() => {
+                if (isEyeTrackingActive) {
+                    simulateEyeMovement();
+                }
+            }, 2000);
+        }
+
+        function stopEyeTracking() {
+            console.log('Eye tracking stopped');
+        }
+
+        function simulateEyeMovement() {
+            const objects = document.querySelectorAll('.object-card');
+            const randomObject = objects[Math.floor(Math.random() * objects.length)];
+            
+            // Highlight looked-at object
+            randomObject.style.borderColor = '#ff6b6b';
+            setTimeout(() => {
+                randomObject.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            }, 1000);
+            
+            showFeedback('Eye tracking: Object focused');
+        }
+
+        function startGestureTracking() {
+            console.log('Gesture tracking started');
+        }
+
+        function stopGestureTracking() {
+            console.log('Gesture tracking stopped');
+        }
+
+        // Feedback system
+        function showFeedback(message) {
+            const feedback = document.createElement('div');
+            feedback.style.position = 'fixed';
+            feedback.style.top = '20px';
+            feedback.style.left = '50%';
+            feedback.style.transform = 'translateX(-50%)';
+            feedback.style.background = 'rgba(0, 255, 255, 0.2)';
+            feedback.style.backdropFilter = 'blur(10px)';
+            feedback.style.border = '1px solid rgba(0, 255, 255, 0.5)';
+            feedback.style.borderRadius = '25px';
+            feedback.style.padding = '10px 20px';
+            feedback.style.color = '#ffffff';
+            feedback.style.fontSize = '14px';
+            feedback.style.zIndex = '10000';
+            feedback.style.animation = 'fade-in 0.3s ease';
+            feedback.textContent = message;
+            
+            document.body.appendChild(feedback);
+            
+            setTimeout(() => {
+                feedback.style.animation = 'fade-out 0.3s ease forwards';
+                setTimeout(() => {
+                    feedback.remove();
+                }, 300);
+            }, 2000);
+        }
+
+        // Settings modal
+        function createSettingsModal() {
+            const modal = document.createElement('div');
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.right = '0';
+            modal.style.bottom = '0';
+            modal.style.background = 'rgba(0, 0, 0, 0.8)';
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.zIndex = '10000';
+            modal.style.animation = 'fade-in 0.3s ease';
+            
+            modal.innerHTML = `
+                <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 20px; padding: 40px; max-width: 500px; width: 90%;">
+                    <h2 style="color: #00ffff; margin-bottom: 30px; text-align: center;">VR Settings</h2>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; color: #a0a0a0; margin-bottom: 10px;">Field of View</label>
+                        <input type="range" min="60" max="120" value="90" style="width: 100%;">
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; color: #a0a0a0; margin-bottom: 10px;">Gesture Sensitivity</label>
+                        <input type="range" min="1" max="10" value="5" style="width: 100%;">
+                    </div>
+                    <div style="margin-bottom: 30px;">
+                        <label style="display: block; color: #a0a0a0; margin-bottom: 10px;">Voice Recognition</label>
+                        <input type="range" min="1" max="10" value="7" style="width: 100%;">
+                    </div>
+                    <div style="text-align: center;">
+                        <button onclick="closeSettingsModal()" style="background: linear-gradient(45deg, #00ffff, #4ecdc4); border: none; border-radius: 25px; padding: 12px 30px; color: #000; font-weight: 600; cursor: pointer;">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            window.currentModal = modal;
+        }
+
+        function closeSettingsModal() {
+            if (window.currentModal) {
+                window.currentModal.style.animation = 'fade-out 0.3s ease forwards';
+                setTimeout(() => {
+                    window.currentModal.remove();
+                    window.currentModal = null;
+                }, 300);
+            }
+        }
+
+        // Add CSS animations for fade effects
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fade-in {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            @keyframes fade-out {
+                from { opacity: 1; transform: translateY(0); }
+                to { opacity: 0; transform: translateY(-20px); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case '1': selectTool('select'); break;
+                case '2': selectTool('move'); break;
+                case '3': selectTool('rotate'); break;
+                case '4': selectTool('scale'); break;
+                case '5': selectTool('create'); break;
+                case 'Escape': closeSettingsModal(); break;
+                case ' ': e.preventDefault(); toggleGestureMode(); break;
+            }
+        });
+
+        console.log('NeuroSpace VR Interface loaded successfully');
+    </script>
+</body>
+</html>
